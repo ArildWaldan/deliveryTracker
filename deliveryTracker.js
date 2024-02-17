@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         deliveryTracker
+// @name         ToggleBar
 // @namespace    http://tampermonkey.net/
 // @version      2024-02-16
 // @description  try to take over the world!
@@ -76,7 +76,7 @@ GM_addStyle(`
     .overlay-menu-item {
         align-items: left;
         justify-content: left;
-        font-size: 8;
+        font-size: 10;
         font-family: 'Segoe UI', Roboto, sans-serif;
         color: #aeafb0;
         font-weight: bold;
