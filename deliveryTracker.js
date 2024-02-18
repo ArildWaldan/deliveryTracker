@@ -49,39 +49,65 @@ GM_addStyle(`
             height: 100%;
             background-color: rgba(0, 0, 0, 0.8);
             transform: translateX(-100%);
-            transition: transform 0.5s ease;
+            transition: all 0.5s ease;
             z-index: 5000;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding-top: 220px;
+
+
     }
 
+
     .overlay-title {
-             color: white;
-             font-size: 24px; /* Adjust size as needed */
-             font-family: 'Segoe UI', Roboto, sans-serif; /* This is an example; adjust as needed */
-             margin: 0 0 20px 0; /* Add some margin below the title */
+         color: white;
+         font-size: 24px; 
+         font-family: 'Segoe UI', Roboto, sans-serif;
+         position: absolute;
+         left: 125px;
+         top : 25%;
+         transform: translateX(-50%);
+
+
      }
 
     .overlay-menu-container {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-around; /* Adjust spacing as needed */
-        width: 100%; /* Ensure it spans the full width of the overlay */
-        padding: 10px 0; /* Add some vertical padding */
+        position: fixed;
+        height: 100%;
+        width: 250px;
+        z-index: 10000;
+    }
 
+
+    .overlay-menu-container::after {
+        content: ""; /* No actual content, used for styling purposes */
+        z-index: 10000;
+        position: relative;
+        display: inline-block;
+        top: 50%;
+        transform: translateY(-50%);
+        height: 70%;
+        width: 1px;
+        background: linear-gradient(
+        to bottom,
+        rgba(100, 100, 100, 0) 0%,
+        rgba(100, 100, 100, 1) 50%,
+        rgba(100, 100, 100, 0) 100%
+    );
+        margin-left: 249px;
     }
 
     .overlay-menu-item {
-        align-items: left;
-        justify-content: left;
+
+        left: 125px;
+        position: fixed;
+        justify-content: center;
         font-size: 10;
         font-family: 'Segoe UI', Roboto, sans-serif;
         color: #aeafb0;
         font-weight: bold;
         transition: all 0.3s ease;
-        transform: translateY(-3px);
+        transform: translate(-50%,-3px);
+        z-index: 10001;
 
     }
 
@@ -90,6 +116,28 @@ GM_addStyle(`
         cursor: pointer;
         color: white;
     }
+
+    .overlay-details-container {
+        position: fixed;
+        height: 100%;
+        width: 250px;
+        right: 1px;
+        justify-content: space-evenly;
+        padding: 10p;
+        z-index: 50;
+
+    }
+
+    .overlay-details-container::after {
+    content: ""
+    }
+
+
+    .delivery-item {
+    justify-content: center;
+    font-size: 8;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+
 `);
 
 
@@ -98,6 +146,16 @@ let overlay = null; // Holds the overlay element
 
 let OverlayIsVisible = false; // Tracks the overlay's visibility
 
+let deliveryInfo = "";
+
+const deliveryItemList = {
+    item1: "content1",
+    item2: "content2",
+    item3: "content3",
+    item4: "content4",
+    item5: "content5",
+    item6: "content6",
+}
 
 const deliveriesData = { // Example data for deliveries
     toComeDeliveries: 5,
@@ -111,7 +169,7 @@ function createOverlay() {
     const overlay = document.createElement('div');
     overlay.className = 'overlay';
 
-     const title = document.createElement('h1');
+    const title = document.createElement('h1');
     title.className = 'overlay-title';
     title.textContent = 'Livraisons';
 
@@ -126,43 +184,85 @@ function createOverlay() {
     // Create menu items container
     const menuContainer = document.createElement('div');
     menuContainer.className = 'overlay-menu-container';
+    overlay.appendChild(menuContainer);
+
+    // Create details tab container
+    const detailsContainer = document.createElement('div');
+    detailsContainer.className = 'overlay-details-container';
+    overlay.appendChild(detailsContainer);
+
+    //Create delivery item list
+    createDeliveryItems();
+
+
 
     // Names for the menu items
     const menuNames = ['Prévues', 'Demain', 'Aujourd\'hui'];
     const buttonIds = ['toComeDeliveries', 'tomorrowDeliveries', 'todayDeliveries'];
 
-    // Create and append menu items
-    buttonIds.forEach((id, index) => {
-        const menuItem = document.createElement('div');
-        menuItem.className = 'overlay-menu-item';
-        menuItem.textContent = `${menuNames[index]} (${deliveriesData[id]})`; // Set text with count
-        //menuContainer.appendChild(menuItem);
-    });
-     // Calculate the positions of the circle buttons
+
+    // Calculate the positions of the circle buttons
     const buttonPositions = ['toComeDeliveries', 'tomorrowDeliveries', 'todayDeliveries'].map(id => {
         const button = document.getElementById(id);
         return button ? button.offsetTop : 0; // Get the Y position of each button, if available
+
     });
+
 
     // Create menu items based on the button positions
     buttonPositions.forEach((posY, index) => {
         const menuItem = document.createElement('div');
         menuItem.className = 'overlay-menu-item';
-        // Example text, replace with actual content as needed
         menuItem.textContent = `${['Prévues', 'Demain', 'Aujourd\'hui'][index]} (${[5, 2, 3][index]})`; // Placeholder values
-        // Set the style to position each menu item according to its corresponding button
         menuItem.style.position = 'absolute';
         menuItem.style.top = `${posY}px`; // Align vertically with the corresponding button
-        overlay.appendChild(menuItem);
+        menuContainer.appendChild(menuItem);
+
+        //onClick
+        menuItem.addEventListener('click',() => {
+            deliveryInfo = '';
+            switch (index) {
+                case 0:
+                    deliveryInfo = "test1";
+                    break;
+                case 1:
+                    deliveryInfo = deliveryItemList.item2;
+                    break;
+                case 2:
+                    deliveryInfo = deliveryItemList.item3;
+                    break;
+                default:
+                    deliveryInfo = 'No information available';
+            }
+            updateDetailsContainer(deliveryInfo); // Update the details container with the relevant information
+            adjustOverlayWidth(500); // You might adjust this as per your needs
+        });
     });
 
 
-    overlay.appendChild(menuContainer);
     document.body.appendChild(overlay);
     return overlay;
-
-
 }
+
+
+
+function createDeliveryItems() {
+    const deliveryDetailsContainer = document.querySelector(".overlay-details-container"); // Use querySelector for class selectors
+    Object.keys(deliveryItemList).forEach((key) => {
+        const deliveryItem = document.createElement('div');
+        deliveryItem.className = 'delivery-item';
+        deliveryItem.textContent = deliveryItemList[key]; // Set the text content to the value from the deliveryItemList
+        deliveryDetailsContainer.appendChild(deliveryItem);
+    });
+}
+
+/* function updateDetailsContainer(text) {
+    const detailsContainer = document.querySelector('.overlay-details-container');
+    if (detailsContainer) {
+        detailsContainer.innerHTML = `<p>${text}</p>`; // Use innerHTML to insert the text. Adjust the markup as needed.
+    }
+}
+ */
 
 
 
@@ -173,6 +273,15 @@ function toggleOverlay() {
     }
     OverlayIsVisible = !OverlayIsVisible; // Update visibility state
     overlay.style.transform = OverlayIsVisible ? 'translateX(0)' : 'translateX(-100%)';
+    overlay.style.width = OverlayIsVisible ? '' : '250px';
+    if (OverlayIsVisible) {deliveryInfo = ""};
+}
+
+
+function adjustOverlayWidth(value) {
+    if (overlay) {
+        overlay.style.width = `${value}px`;
+    }
 }
 
 
