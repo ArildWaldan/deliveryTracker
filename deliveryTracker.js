@@ -11,33 +11,57 @@
 
 
 GM_addStyle(`
-    .circle-button {
+
+    .button-container {
         position: fixed;
-        left: 15px;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        cursor: pointer;
-        color: white; /* Text color */
+        top: 50%;
+        transform: translateY(-50%);
+        left: 0px;
+        width: 60px;
+        height: 100%;
         display: flex;
-        align-items: center;
         justify-content: center;
-        font-size: 0;
-        font-family: 'Segoe UI', Roboto, sans-serif;
-        font-weight: bold;
-        z-index: 10001; /* Ensure a high z-index */
-        transition: transform 0.3s ease, font-size 0.3s ease;
-        transform: scale(1); /* Initial scale */
+        flex-direction: column;
+        gap: 46px;
+        z-index:10000;
     }
 
-    #toComeDeliveries { background-color: green; }
-    #tomorrowDeliveries { background-color: orange; }
-    #todayDeliveries { background-color: red; }
+
+    .circle-button {
+    position: relative;
+    left: 20px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center; /* Centers children vertically */
+    font-size: 7px;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    font-weight: bold;
+    z-index: 10001;
+    transition: transform 0.3s ease, font-size 0.3s ease, color 0.5s ease;
+    color: rgba(255, 255, 255, 0);
+    }
+
+    #toComeDeliveries {
+        background-color: green;
+    }
+
+    #tomorrowDeliveries {
+        background-color: orange;
+    }
+
+   #todayDeliveries {
+      background-color: red;
+
+   }
 
     .circle-button:hover {
-        transform: scale(2.3);
-        font-size: 6px;
+        transform: scale(2);
         cursor: pointer;
+        color: rgba(255, 255, 255, 1)
 }
 
 
@@ -53,6 +77,7 @@ GM_addStyle(`
             z-index: 5000;
             display: flex;
             flex-direction: column;
+            justify-content: center;
 
 
     }
@@ -69,18 +94,21 @@ GM_addStyle(`
      }
 
     .overlay-menu-container {
-        position: fixed;
-        height: 100%;
+        position: relative;
+        display: flex;
+        flex-direction: column;
         width: 250px;
         z-index: 10000;
         justify-content: center;
+        gap: 40px;
+
     }
 
 
     .overlay-menu-container::after {
         content: ""; /* No actual content, used for styling purposes */
         z-index: 10000;
-        position: relative;
+        position: fixed;
         display: inline-block;
         top: 50%;
         transform: translateY(-50%);
@@ -98,22 +126,20 @@ GM_addStyle(`
 
 
     .overlay-menu-item {
-
-        left: 125px;
-        position: fixed;
-        justify-content: center;
-        font-size: 10;
+        font-size: 16px;
         font-family: 'Segoe UI', Roboto, sans-serif;
         color: #aeafb0;
+        display: flex;
         font-weight: bold;
         transition: all 0.3s ease;
-        transform: translate(-50%,-3px);
         z-index: 10001;
+
+        margin: 0px 0px 0px 60px;
     }
 
 
     .overlay-menu-item:hover {
-        font-size: 10;
+        font-size: 17px;
         cursor: pointer;
         color: white;
     }
@@ -129,7 +155,7 @@ GM_addStyle(`
         padding: 0px;
         z-index: 50;
         opacity: 0;
-        transition: opacity 0.5s ease-in-out;
+        transition: opacity 0.8s ease-in-out;
         display: none;
         flex-direction: column;
         top: 50%;
@@ -143,9 +169,9 @@ GM_addStyle(`
 
 
     .delivery-item {
-        margin: 0px;
+        margin: 0px 10px 0px 20px;
         box-sizing: border-box;
-        font-size: 8;
+        font-size: 14px;
         display: block;
         width: 100%;
         font-family: 'Segoe UI', Roboto, sans-serif;
@@ -264,8 +290,8 @@ function createOverlay() {
         const menuItem = document.createElement('div');
         menuItem.className = 'overlay-menu-item';
         menuItem.textContent = `${['Prévues', 'Demain', 'Aujourd\'hui'][index]} (${[5, 2, 3][index]})`; // Placeholder values
-        menuItem.style.position = 'absolute';
-        menuItem.style.top = `${posY}px`; // Align vertically with the corresponding button
+        menuItem.style.position = 'relative';
+        // menuItem.style.top = `${posY}px`; // Align vertically with the corresponding button
         menuContainer.appendChild(menuItem);
         console.log("Menu item appended to the menu container");
 
@@ -397,6 +423,11 @@ document.addEventListener('click', function(event) {
 function createButtons() {
     const buttonColors = ['green', 'orange', 'red']; // Colors in the desired order
     const buttonIds = ['toComeDeliveries', 'tomorrowDeliveries', 'todayDeliveries']; // IDs in the desired order
+    const buttonContainer = document.createElement('div');
+
+    buttonContainer.id = "buttonContainer";
+    buttonContainer.className = 'button-container';
+    document.body.appendChild(buttonContainer);
 
     // Calculate starting Y position to vertically center buttons
     const totalHeight = (buttonColors.length * 30) + ((buttonColors.length - 1) * 30); // Total height of buttons plus margin
@@ -409,11 +440,11 @@ function createButtons() {
         button.id = buttonIds[index];
         button.textContent = deliveriesData[buttonIds[index]];
         button.className = 'circle-button';
-        button.style.top = `${startY}px`;
+        //button.style.top = `${startY}px`;
         startY += 40; // Move down for the next button; 10px height + 10px margin
         button.addEventListener('click', toggleOverlay);
 
-        document.body.appendChild(button);
+        buttonContainer.appendChild(button);
         return (button);
     });
 
