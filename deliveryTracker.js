@@ -73,6 +73,7 @@ GM_addStyle(`
         height: 100%;
         width: 250px;
         z-index: 10000;
+        justify-content: center;
     }
 
 
@@ -120,12 +121,19 @@ GM_addStyle(`
 
     .overlay-details-container {
         position: fixed;
+        box-sizing: border-box;
         height: 65%;
         width: 250px;
         right: 1px;
-        justify-content: space-evenly;
-        padding: 20px;
+        justify-content: center;
+        padding: 0px;
         z-index: 50;
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out;
+        display: none;
+        flex-direction: column;
+        top: 50%;
+        transform: translateY(-50%);
 
     }
 
@@ -135,11 +143,16 @@ GM_addStyle(`
 
 
     .delivery-item {
-    justify-content: center;
-    font-size: 8;
-    font-family: 'Segoe UI', Roboto, sans-serif;
-    color: white;
-    padding: 10 px;
+        margin: 0px;
+        box-sizing: border-box;
+        font-size: 8;
+        display: block;
+        width: 100%;
+        font-family: 'Segoe UI', Roboto, sans-serif;
+        color: white;
+        padding: 20px;
+
+
     }
 
 `);
@@ -150,7 +163,7 @@ let overlay = null; // Holds the overlay element
 
 let OverlayIsVisible = false; // Tracks the overlay's visibility
 
-let deliveryInfo = "";
+let detailsContainer1, detailsContainer2, detailsContainer3;
 
 const deliveryItemList = { //test Dataset for development
     allDeliveries: [
@@ -205,12 +218,31 @@ function createOverlay() {
         console.log("Menu Container appended to the overlay");
     }
 
-    // Create details tab container
-    if (!document.querySelector(".overlay-details-container")) {
-        const detailsContainer = document.createElement('div');
-        detailsContainer.className = 'overlay-details-container';
-        overlay.appendChild(detailsContainer);
-        console.log("details container appended to the overlay");
+    // Create details tab containers
+    if (document.querySelectorAll(".overlay-details-container").length === 0) {
+        detailsContainer1 = document.createElement('div');
+        detailsContainer2 = document.createElement('div');
+        detailsContainer3 = document.createElement('div');
+
+        detailsContainer1.className = 'overlay-details-container';
+        detailsContainer2.className = 'overlay-details-container';
+        detailsContainer3.className = 'overlay-details-container';
+
+        detailsContainer1.id = 'detailsContainer1';
+        detailsContainer2.id = 'detailsContainer2';
+        detailsContainer3.id = 'detailsContainer3';
+
+        overlay.appendChild(detailsContainer1);
+        overlay.appendChild(detailsContainer2);
+        overlay.appendChild(detailsContainer3);
+
+        //Populating the details container :
+
+        createDeliveryItems(detailsContainer1, "allDeliveries");
+        createDeliveryItems(detailsContainer2, "tomorrowsDeliveries");
+        createDeliveryItems(detailsContainer3, "todaysDeliveries");
+
+        console.log("details containers appended to the overlay");
     }
 
 
@@ -242,32 +274,44 @@ function createOverlay() {
             console.log("Menu button clicked");
             adjustOverlayWidth(500);
 
-            const dataSetKeys = ['allDeliveries', 'tomorrowsDeliveries', 'todaysDeliveries'];
-            console.log("Calling 'createDeliveryItems' with", dataSetKeys[index]);
-            createDeliveryItems(dataSetKeys[index]);
+            switch (index) {
+                case 0:
+                    toggleDetailsContainer(detailsContainer1);
+                    break;
+                case 1:
+                    toggleDetailsContainer(detailsContainer2);
+                    break;
+                case 2:
+                    toggleDetailsContainer(detailsContainer3);
+                    break;
+                default:
+                    //deliveryInfo = 'No information available';
+            }
 
 
         });
     });
-
-
 
     return overlay;
 }
 
 
 
-function createDeliveryItems(dataSetKey) {
+
+
+
+
+function createDeliveryItems(container, dataSetKey) {
     console.log("Creating delivery items");
-    const deliveryDetailsContainer = document.querySelector(".overlay-details-container");
-    if (!deliveryDetailsContainer) {
+
+    if (!container) {
         console.log("Delivery details container not found");
         return;
     }
 
-    console.log("Details container found : ", deliveryDetailsContainer);
-    deliveryDetailsContainer.innerHTML = ''; // Clear previous items
-    console.log("previous items cleared");
+    console.log("Details container found : ", container);
+    //container.innerHTML = ''; // Clear previous items
+
 
     const dataSet = deliveryItemList[dataSetKey];
 
@@ -283,13 +327,32 @@ function createDeliveryItems(dataSetKey) {
         deliveryItem.className = 'delivery-item';
         //console.log("class assigned");
         // Format the text content to include both the delivery number and client name
-        deliveryItem.textContent = `Delivery Number: ${item.deliveryNumber}, Client: ${item.deliveryClient}`;
-        deliveryDetailsContainer.appendChild(deliveryItem);
+        deliveryItem.innerHTML = `<strong>Commande :</strong> ${item.deliveryNumber}<br><strong>Client:</strong> ${item.deliveryClient}`;
+        container.appendChild(deliveryItem);
         //console.log("deliveryItem appended to the details container");
     });
 }
 
 
+
+
+function toggleDetailsContainer(visibleContainer) {
+    const containers = [detailsContainer1, detailsContainer2, detailsContainer3]; // Array of containers
+    containers.forEach(container => {
+        if (container === visibleContainer) {
+            container.style.display = 'flex'; // Make sure it's flex to keep your inner layout
+            requestAnimationFrame(() => { // Ensures display is processed before starting opacity transition
+                container.style.opacity = 1;
+            });
+        } else {
+            // Wait for the opacity transition to finish before setting display to none
+            container.style.opacity = 0;
+            setTimeout(() => {
+                container.style.display = 'none';
+            }, 500); // Ensure this matches your CSS transition time
+        }
+    });
+}
 
 
 
@@ -302,7 +365,14 @@ function toggleOverlay() {
     OverlayIsVisible = !OverlayIsVisible; // Update visibility state
     overlay.style.transform = OverlayIsVisible ? 'translateX(0)' : 'translateX(-100%)';
     overlay.style.width = OverlayIsVisible ? '' : '250px';
-    if (OverlayIsVisible) {deliveryInfo = ""};
+    detailsContainer1.style.opacity = 0;
+    detailsContainer2.style.opacity = 0;
+    detailsContainer3.style.opacity = 0;
+    setTimeout(() => {
+        detailsContainer1.style.display = 'none';
+        detailsContainer2.style.display = 'none';
+        detailsContainer3.style.display = 'none';
+    });
 }
 
 
