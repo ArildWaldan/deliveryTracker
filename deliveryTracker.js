@@ -60,14 +60,12 @@ GM_addStyle(`
 
     .overlay-title {
          color: white;
-         font-size: 24px; 
+         font-size: 24px;
          font-family: 'Segoe UI', Roboto, sans-serif;
          position: absolute;
          left: 125px;
          top : 25%;
          transform: translateX(-50%);
-
-
      }
 
     .overlay-menu-container {
@@ -88,13 +86,15 @@ GM_addStyle(`
         height: 70%;
         width: 1px;
         background: linear-gradient(
-        to bottom,
-        rgba(100, 100, 100, 0) 0%,
-        rgba(100, 100, 100, 1) 50%,
-        rgba(100, 100, 100, 0) 100%
-    );
+            to bottom,
+            rgba(100, 100, 100, 0) 0%,
+            rgba(100, 100, 100, 1) 50%,
+            rgba(100, 100, 100, 0) 100%
+        );
         margin-left: 249px;
     }
+
+
 
     .overlay-menu-item {
 
@@ -108,8 +108,8 @@ GM_addStyle(`
         transition: all 0.3s ease;
         transform: translate(-50%,-3px);
         z-index: 10001;
-
     }
+
 
     .overlay-menu-item:hover {
         font-size: 10;
@@ -117,13 +117,14 @@ GM_addStyle(`
         color: white;
     }
 
+
     .overlay-details-container {
         position: fixed;
-        height: 100%;
+        height: 65%;
         width: 250px;
         right: 1px;
         justify-content: space-evenly;
-        padding: 10p;
+        padding: 20px;
         z-index: 50;
 
     }
@@ -137,6 +138,9 @@ GM_addStyle(`
     justify-content: center;
     font-size: 8;
     font-family: 'Segoe UI', Roboto, sans-serif;
+    color: white;
+    padding: 10 px;
+    }
 
 `);
 
@@ -148,14 +152,23 @@ let OverlayIsVisible = false; // Tracks the overlay's visibility
 
 let deliveryInfo = "";
 
-const deliveryItemList = {
-    item1: "content1",
-    item2: "content2",
-    item3: "content3",
-    item4: "content4",
-    item5: "content5",
-    item6: "content6",
-}
+const deliveryItemList = { //test Dataset for development
+    allDeliveries: [
+        { deliveryNumber: "D001", deliveryClient: "Client A" },
+        { deliveryNumber: "D002", deliveryClient: "Client B" },
+        { deliveryNumber: "D003", deliveryClient: "Client C" }
+    ],
+    tomorrowsDeliveries: [
+        { deliveryNumber: "D004", deliveryClient: "Client D" },
+        { deliveryNumber: "D005", deliveryClient: "Client E" }
+    ],
+    todaysDeliveries: [
+        { deliveryNumber: "D006", deliveryClient: "Client F" },
+        { deliveryNumber: "D007", deliveryClient: "Client G" }
+    ]
+};
+
+
 
 const deliveriesData = { // Example data for deliveries
     toComeDeliveries: 5,
@@ -166,34 +179,39 @@ const deliveriesData = { // Example data for deliveries
 
 
 function createOverlay() {
-    const overlay = document.createElement('div');
+    overlay = document.createElement('div');
     overlay.className = 'overlay';
+    document.body.appendChild(overlay);
+    console.log("Overlay appended to the body");
 
     const title = document.createElement('h1');
     title.className = 'overlay-title';
     title.textContent = 'Livraisons';
 
-    // Append the title to the overlay
     overlay.appendChild(title);
+    console.log("Title appended to the overlay");
 
 
     overlay.style.transform = 'translateX(-100%)';
     void overlay.offsetHeight;
-    document.body.appendChild(overlay);
+
 
     // Create menu items container
-    const menuContainer = document.createElement('div');
-    menuContainer.className = 'overlay-menu-container';
-    overlay.appendChild(menuContainer);
+    let menuContainer = null;
+    if (!document.querySelector(".overlay-menu-container")) {
+        menuContainer = document.createElement('div');
+        menuContainer.className = 'overlay-menu-container';
+        overlay.appendChild(menuContainer);
+        console.log("Menu Container appended to the overlay");
+    }
 
     // Create details tab container
-    const detailsContainer = document.createElement('div');
-    detailsContainer.className = 'overlay-details-container';
-    overlay.appendChild(detailsContainer);
-
-    //Create delivery item list
-    createDeliveryItems();
-
+    if (!document.querySelector(".overlay-details-container")) {
+        const detailsContainer = document.createElement('div');
+        detailsContainer.className = 'overlay-details-container';
+        overlay.appendChild(detailsContainer);
+        console.log("details container appended to the overlay");
+    }
 
 
     // Names for the menu items
@@ -217,60 +235,70 @@ function createOverlay() {
         menuItem.style.position = 'absolute';
         menuItem.style.top = `${posY}px`; // Align vertically with the corresponding button
         menuContainer.appendChild(menuItem);
+        console.log("Menu item appended to the menu container");
 
         //onClick
         menuItem.addEventListener('click',() => {
-            deliveryInfo = '';
-            switch (index) {
-                case 0:
-                    deliveryInfo = "test1";
-                    break;
-                case 1:
-                    deliveryInfo = deliveryItemList.item2;
-                    break;
-                case 2:
-                    deliveryInfo = deliveryItemList.item3;
-                    break;
-                default:
-                    deliveryInfo = 'No information available';
-            }
-            updateDetailsContainer(deliveryInfo); // Update the details container with the relevant information
-            adjustOverlayWidth(500); // You might adjust this as per your needs
+            console.log("Menu button clicked");
+            adjustOverlayWidth(500);
+
+            const dataSetKeys = ['allDeliveries', 'tomorrowsDeliveries', 'todaysDeliveries'];
+            console.log("Calling 'createDeliveryItems' with", dataSetKeys[index]);
+            createDeliveryItems(dataSetKeys[index]);
+
+
         });
     });
 
 
-    document.body.appendChild(overlay);
+
     return overlay;
 }
 
 
 
-function createDeliveryItems() {
-    const deliveryDetailsContainer = document.querySelector(".overlay-details-container"); // Use querySelector for class selectors
-    Object.keys(deliveryItemList).forEach((key) => {
+function createDeliveryItems(dataSetKey) {
+    console.log("Creating delivery items");
+    const deliveryDetailsContainer = document.querySelector(".overlay-details-container");
+    if (!deliveryDetailsContainer) {
+        console.log("Delivery details container not found");
+        return;
+    }
+
+    console.log("Details container found : ", deliveryDetailsContainer);
+    deliveryDetailsContainer.innerHTML = ''; // Clear previous items
+    console.log("previous items cleared");
+
+    const dataSet = deliveryItemList[dataSetKey];
+
+    if (!dataSet) {
+        console.log("No data set found to populate the container");
+        return; // Exit if dataSetKey is not valid
+    }
+    console.log("data set found to populate the container", dataSet);
+
+    dataSet.forEach((item) => {
         const deliveryItem = document.createElement('div');
+        //console.log("div created");
         deliveryItem.className = 'delivery-item';
-        deliveryItem.textContent = deliveryItemList[key]; // Set the text content to the value from the deliveryItemList
+        //console.log("class assigned");
+        // Format the text content to include both the delivery number and client name
+        deliveryItem.textContent = `Delivery Number: ${item.deliveryNumber}, Client: ${item.deliveryClient}`;
         deliveryDetailsContainer.appendChild(deliveryItem);
+        //console.log("deliveryItem appended to the details container");
     });
 }
 
-/* function updateDetailsContainer(text) {
-    const detailsContainer = document.querySelector('.overlay-details-container');
-    if (detailsContainer) {
-        detailsContainer.innerHTML = `<p>${text}</p>`; // Use innerHTML to insert the text. Adjust the markup as needed.
-    }
-}
- */
+
+
 
 
 
 function toggleOverlay() {
-    if (!overlay) {
-        overlay = createOverlay();
-        void overlay.offsetHeight;
-    }
+    // if (!overlay) {
+    //     overlay = createOverlay();
+    //     void overlay.offsetHeight;
+    // }
     OverlayIsVisible = !OverlayIsVisible; // Update visibility state
     overlay.style.transform = OverlayIsVisible ? 'translateX(0)' : 'translateX(-100%)';
     overlay.style.width = OverlayIsVisible ? '' : '250px';
@@ -329,8 +357,9 @@ function createButtons() {
 (function() {
     'use strict';
     console.log("DOM Loaded");
-    createOverlay()
-    console.log("Overlay added");
     createButtons();
     console.log("Buttons added");
+    createOverlay()
+    console.log("Overlay added");
+
 })();
