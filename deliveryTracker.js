@@ -31,13 +31,14 @@ GM_addStyle(`
         top: 50%;
         transform: translateY(-50%);
         left: 0px;
-        width: 1px;
+        width: 40px;
         height: 100%;
         display: flex;
         justify-content: center;
         flex-direction: column;
-        gap: 5.75%;
+        gap: 48px;
         z-index:10000;
+
     }
 
 
@@ -46,7 +47,7 @@ GM_addStyle(`
     left: 20px;
     width: 10px;
     height: 10px;
-    border-radius: 50%;
+    border-radius: 5%;
     cursor: pointer;
     display: flex;
     justify-content: center;
@@ -115,7 +116,7 @@ GM_addStyle(`
         width: 250px;
         z-index: 10000;
         justify-content: center;
-        gap: 4%;
+        gap: 35px;
 
     }
 
@@ -186,10 +187,11 @@ GM_addStyle(`
 
 
     .delivery-item {
-        margin: 0px 10px 0px 20px;
+        margin: 0px 5px 0px 5px;
         box-sizing: border-box;
         font-size: 14px;
         display: block;
+        word-break: break-word;
         width: 100%;
         font-family: 'Segoe UI', Roboto, sans-serif;
         color: white;
@@ -511,114 +513,142 @@ function toISOStringWithoutTime(date) {
 }
 
 
+
+
 async function makeDeliveryAPIRequest() {
-    const url = "https://api.production.colisweb.com/api/v5/clients/249/stores/8481/deliveries";
-    const method = "POST";
-    const headers = {
-        "Content-Type": "application/json"
-    };
 
-    // Constructing the dynamic payload
-    const today = new Date();
-    const tenDaysFromToday = addDays(today, 10);
-    const payload = {
-        filters: {
-            timeSlot: {
-                start: toISOStringWithoutTime(today), // Today as start date
-                end: toISOStringWithoutTime(tenDaysFromToday) // Today + 10 days as end date
+    const lastTimeCheckKey = 'lastTimeCheck';
+    const lastTimeCheck = await GM.getValue(lastTimeCheckKey, 0); // Default to 0 if not set
+    const currentTime = Date.now();
+
+    // Check if more than an hour has passed
+    if (currentTime - lastTimeCheck > 3600000) { //3600000
+
+        const url = "https://api.production.colisweb.com/api/v5/clients/249/stores/8481/deliveries";
+        const method = "POST";
+        const headers = {
+            "Content-Type": "application/json"
+        };
+
+        // Constructing the dynamic payload
+        const today = new Date();
+        const tenDaysFromToday = addDays(today, 10);
+        const payload = {
+            filters: {
+                timeSlot: {
+                    start: toISOStringWithoutTime(today), // Today as start date
+                    end: toISOStringWithoutTime(tenDaysFromToday) // Today + 10 days as end date
+                },
+                statusProvider: ["preOrdered", "confirmed", "pickedUp", "deliveryFailed", "deliveryReturnFailed"]
             },
-            statusProvider: ["preOrdered", "confirmed", "pickedUp", "deliveryFailed", "deliveryReturnFailed"]
-        },
-        sort: {
-            timeSlot: "asc"
-        },
-        page: "1",
-        pageSize: "100"
-    };
+            sort: {
+                timeSlot: "asc"
+            },
+            page: "1",
+            pageSize: "100"
+        };
 
-    try {
-        const response = await callAPI(url, method, headers, JSON.stringify(payload));
-        console.log("API call successful:", response);
-        return response;
-    } catch (error) {
-        console.error("API call failed:", error);
+        try {
+            const response = await callAPI(url, method, headers, JSON.stringify(payload));
+            console.log("API call successful:", response);
+            await GM.setValue(lastTimeCheckKey, currentTime);
+            return response;
+        } catch (error) {
+            console.error("API call failed:", error);
+        }
+    } else {
+        console.log("API call bypassed: using stored data.");
+        return "bypass";
     }
-
 }
 
 
 // Parse the delivery API response :
-function parseDeliveries(responseText) {
-    const response = JSON.parse(responseText);
-    const deliveries = response.deliveries;
+async function parseDeliveries(responseText) {
 
-    const allDeliveries = [];
-    const todaysDeliveries = [];
-    const tomorrowsDeliveries = [];
+    if (responseText !== "bypass") {
+        const response = JSON.parse(responseText);
+        const deliveries = response.deliveries;
 
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+        const allDeliveries = [];
+        const todaysDeliveries = [];
+        const tomorrowsDeliveries = [];
 
-    deliveries.forEach((delivery) => {
-        const deliveryNumber = ['ref1', 'ref2', 'ref3', 'ref4']
-            .map(ref => delivery[ref])
-            .filter(ref => ref !== null)
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        deliveries.forEach((delivery) => {
+            const deliveryNumber = [...new Set(['ref1', 'ref2', 'ref3', 'ref4']
+                                               .map(ref => delivery[ref])
+                                               .filter(ref => ref !== null))]
             .join(", ");
-        const deliveryClient = `${delivery.shipping.firstName} ${delivery.shipping.lastName}`;
-        const date = new Date(delivery.timeSlot.start);
-        const status = delivery.statusOriginator;
+            const deliveryClient = `${delivery.shipping.firstName} ${delivery.shipping.lastName}`;
+            const date = new Date(delivery.timeSlot.start);
+            const status = delivery.statusOriginator;
 
-        const formattedDelivery = {
-            deliveryNumber,
-            deliveryClient,
-            date: date.toISOString().split('T')[0], // Extracting date part only for comparison
-            status
+            const formattedDelivery = {
+                deliveryNumber,
+                deliveryClient,
+                date: date.toISOString().split('T')[0], // Extracting date part only for comparison
+                status
+            };
+
+            // Add to all deliveries
+            allDeliveries.push(formattedDelivery);
+
+            // Check if the delivery is for today
+            if (date.toISOString().split('T')[0] === today.toISOString().split('T')[0]) {
+                todaysDeliveries.push(formattedDelivery);
+            }
+
+            // Check if the delivery is for tomorrow
+            if (date.toISOString().split('T')[0] === tomorrow.toISOString().split('T')[0]) {
+                tomorrowsDeliveries.push(formattedDelivery);
+            }
+        });
+
+        deliveryItemList = {
+            allDeliveries,
+            todaysDeliveries,
+            tomorrowsDeliveries
         };
 
-        // Add to all deliveries
-        allDeliveries.push(formattedDelivery);
+        //console.log("Data about to be stored : ", JSON.stringify(deliveryItemList));
+        GM.setValue('deliveryItemList', JSON.stringify(deliveryItemList));
 
-        // Check if the delivery is for today
-        if (date.toISOString().split('T')[0] === today.toISOString().split('T')[0]) {
-            todaysDeliveries.push(formattedDelivery);
-        }
+        console.log("Delivery Items List:", deliveryItemList);
+        return deliveryItemList;
 
-        // Check if the delivery is for tomorrow
-        if (date.toISOString().split('T')[0] === tomorrow.toISOString().split('T')[0]) {
-            tomorrowsDeliveries.push(formattedDelivery);
-        }
-    });
-
-     deliveryItemList = {
-        allDeliveries,
-        todaysDeliveries,
-        tomorrowsDeliveries
-    };
-
-    console.log("Delivery Items List:", deliveryItemList);
-    return deliveryItemList;
+    } else {
+        const storedDataString = await GM.getValue('deliveryItemList', '{}'); // Retrieve the stored string
+        //console.log("Retrieved string of stored data : ", storedDataString);
+        deliveryItemList = JSON.parse(storedDataString);
+        console.log("Retrieved deliveryItemlist : ", deliveryItemList);
+    }
 }
 
 
-//————————————————————————————————————————————————————————————————————————————————————————
-//————————————————————————————————————————————————————————————————————————————————————————
-//————————————————————————————————————————————————————————————————————————————————————————
+    //————————————————————————————————————————————————————————————————————————————————————————
+    //————————————————————————————————————————————————————————————————————————————————————————
+    //————————————————————————————————————————————————————————————————————————————————————————
 
-// MAIN :
-
-
-
-(async function() {
-    'use strict';
-
-    console.log("DOM Loaded");
-    const response = await makeDeliveryAPIRequest();
-    parseDeliveries(response);
-    createButtons();
-    console.log("Buttons added");
-    createOverlay()
-    console.log("Overlay added");
+    // MAIN :
 
 
-})();
+
+    (async function() {
+        'use strict';
+
+        console.log("DOM Loaded");
+        createButtons();
+        console.log("Buttons added");
+
+        const response = await makeDeliveryAPIRequest();
+        await parseDeliveries(response);
+
+        createOverlay()
+        console.log("Overlay added");
+
+
+    })();
