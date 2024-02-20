@@ -7,7 +7,21 @@
 // @match        https://*/*
 // @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
 // @grant        GM_addStyle
+// @grant        GM_xmlhttpRequest
+// @grant        GM.getValue
+// @grant        GM.setValue
+// @grant        GM.listValues
+// @grant        GM.deleteValue
 // ==/UserScript==
+
+
+
+
+//————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————
+
+// Interface :
 
 
 GM_addStyle(`
@@ -194,8 +208,8 @@ let OverlayIsVisible = false; // Tracks the overlay's visibility
 
 let detailsContainer1, detailsContainer2, detailsContainer3;
 
-const deliveryItemList = { //test Dataset for development
-    allDeliveries: [
+let deliveryItemList = {} //test Dataset for development
+/*     allDeliveries: [
         { deliveryNumber: "D001", deliveryClient: "Client A" },
         { deliveryNumber: "D002", deliveryClient: "Client B" },
         { deliveryNumber: "D003", deliveryClient: "Client C" }
@@ -209,7 +223,7 @@ const deliveryItemList = { //test Dataset for development
         { deliveryNumber: "D007", deliveryClient: "Client G" }
     ]
 };
-
+ */
 
 
 const deliveriesData = { // Example data for deliveries
@@ -217,6 +231,8 @@ const deliveriesData = { // Example data for deliveries
     tomorrowDeliveries: 2,
     todayDeliveries: 3
 };
+
+
 
 
 
@@ -457,13 +473,152 @@ function createButtons() {
 
 
 
+//————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————
 
-(function() {
+// API call :
+
+//Function to call an API
+async function callAPI(url, method, headers, payload) {
+    return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+            method: method,
+            url: url,
+            headers: headers,
+            data: payload,
+            onload: function(response) {
+                resolve(response.responseText);
+            },
+            onerror: function(error) {
+                reject(error);
+            }
+        });
+    });
+}
+
+
+// Function to add days to a Date object
+function addDays(date, days) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+}
+
+// Function to format a Date object as an ISO string without time information
+function toISOStringWithoutTime(date) {
+    return date.toISOString().split('T')[0] + 'T00:00:00.000Z';
+}
+
+
+async function makeDeliveryAPIRequest() {
+    const url = "https://api.production.colisweb.com/api/v5/clients/249/stores/8481/deliveries";
+    const method = "POST";
+    const headers = {
+        "Content-Type": "application/json"
+    };
+
+    // Constructing the dynamic payload
+    const today = new Date();
+    const tenDaysFromToday = addDays(today, 10);
+    const payload = {
+        filters: {
+            timeSlot: {
+                start: toISOStringWithoutTime(today), // Today as start date
+                end: toISOStringWithoutTime(tenDaysFromToday) // Today + 10 days as end date
+            },
+            statusProvider: ["preOrdered", "confirmed", "pickedUp", "deliveryFailed", "deliveryReturnFailed"]
+        },
+        sort: {
+            timeSlot: "asc"
+        },
+        page: "1",
+        pageSize: "100"
+    };
+
+    try {
+        const response = await callAPI(url, method, headers, JSON.stringify(payload));
+        console.log("API call successful:", response);
+        return response;
+    } catch (error) {
+        console.error("API call failed:", error);
+    }
+
+}
+
+
+// Parse the delivery API response :
+function parseDeliveries(responseText) {
+    const response = JSON.parse(responseText);
+    const deliveries = response.deliveries;
+
+    const allDeliveries = [];
+    const todaysDeliveries = [];
+    const tomorrowsDeliveries = [];
+
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    deliveries.forEach((delivery) => {
+        const deliveryNumber = ['ref1', 'ref2', 'ref3', 'ref4']
+            .map(ref => delivery[ref])
+            .filter(ref => ref !== null)
+            .join(", ");
+        const deliveryClient = `${delivery.shipping.firstName} ${delivery.shipping.lastName}`;
+        const date = new Date(delivery.timeSlot.start);
+        const status = delivery.statusOriginator;
+
+        const formattedDelivery = {
+            deliveryNumber,
+            deliveryClient,
+            date: date.toISOString().split('T')[0], // Extracting date part only for comparison
+            status
+        };
+
+        // Add to all deliveries
+        allDeliveries.push(formattedDelivery);
+
+        // Check if the delivery is for today
+        if (date.toISOString().split('T')[0] === today.toISOString().split('T')[0]) {
+            todaysDeliveries.push(formattedDelivery);
+        }
+
+        // Check if the delivery is for tomorrow
+        if (date.toISOString().split('T')[0] === tomorrow.toISOString().split('T')[0]) {
+            tomorrowsDeliveries.push(formattedDelivery);
+        }
+    });
+
+     deliveryItemList = {
+        allDeliveries,
+        todaysDeliveries,
+        tomorrowsDeliveries
+    };
+
+    console.log("Delivery Items List:", deliveryItemList);
+    return deliveryItemList;
+}
+
+
+//————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————
+
+// MAIN :
+
+
+
+(async function() {
     'use strict';
+
     console.log("DOM Loaded");
+    const response = await makeDeliveryAPIRequest();
+    parseDeliveries(response);
     createButtons();
     console.log("Buttons added");
     createOverlay()
     console.log("Overlay added");
+
 
 })();
