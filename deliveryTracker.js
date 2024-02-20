@@ -17,12 +17,12 @@ GM_addStyle(`
         top: 50%;
         transform: translateY(-50%);
         left: 0px;
-        width: 60px;
+        width: 1px;
         height: 100%;
         display: flex;
         justify-content: center;
         flex-direction: column;
-        gap: 46px;
+        gap: 5.75%;
         z-index:10000;
     }
 
@@ -39,7 +39,7 @@ GM_addStyle(`
     align-items: center; /* Centers children vertically */
     font-size: 7px;
     font-family: 'Segoe UI', Roboto, sans-serif;
-    font-weight: bold;
+    font-weight: bolder;
     z-index: 10001;
     transition: transform 0.3s ease, font-size 0.3s ease, color 0.5s ease;
     color: rgba(255, 255, 255, 0);
@@ -97,10 +97,11 @@ GM_addStyle(`
         position: relative;
         display: flex;
         flex-direction: column;
+        height: 100%;
         width: 250px;
         z-index: 10000;
         justify-content: center;
-        gap: 40px;
+        gap: 4%;
 
     }
 
@@ -133,16 +134,18 @@ GM_addStyle(`
         font-weight: bold;
         transition: all 0.3s ease;
         z-index: 10001;
-
+        transform-origin: 0% 50%;
         margin: 0px 0px 0px 60px;
     }
 
 
     .overlay-menu-item:hover {
-        font-size: 17px;
-        cursor: pointer;
         color: white;
+        cursor: pointer;
+        transform: scale(1.1);
     }
+
+
 
 
     .overlay-details-container {
