@@ -31,14 +31,13 @@ GM_addStyle(`
         top: 50%;
         transform: translateY(-50%);
         left: 0px;
-        width: 40px;
+        width: 1px;
         height: 100%;
         display: flex;
         justify-content: center;
         flex-direction: column;
-        gap: 48px;
+        gap: 5%;
         z-index:10000;
-
     }
 
 
@@ -47,7 +46,7 @@ GM_addStyle(`
     left: 20px;
     width: 10px;
     height: 10px;
-    border-radius: 5%;
+    border-radius: 50%;
     cursor: pointer;
     display: flex;
     justify-content: center;
@@ -116,7 +115,7 @@ GM_addStyle(`
         width: 250px;
         z-index: 10000;
         justify-content: center;
-        gap: 35px;
+        gap: 4%;
 
     }
 
@@ -170,7 +169,7 @@ GM_addStyle(`
         width: 250px;
         right: 1px;
         justify-content: center;
-        padding: 0px;
+        padding: 0px 20px 0px 20px;
         z-index: 50;
         opacity: 0;
         transition: opacity 0.8s ease-in-out;
@@ -178,6 +177,7 @@ GM_addStyle(`
         flex-direction: column;
         top: 50%;
         transform: translateY(-50%);
+        gap: 5%;
 
     }
 
@@ -187,15 +187,14 @@ GM_addStyle(`
 
 
     .delivery-item {
-        margin: 0px 5px 0px 5px;
+        margin: 0px 0px 0px 0px;
         box-sizing: border-box;
         font-size: 14px;
         display: block;
-        word-break: break-word;
-        width: 100%;
+        width: 80%;
         font-family: 'Segoe UI', Roboto, sans-serif;
         color: white;
-        padding: 20px;
+        padding: 0px;
 
 
     }
@@ -513,142 +512,149 @@ function toISOStringWithoutTime(date) {
 }
 
 
-
-
 async function makeDeliveryAPIRequest() {
+    const url = "https://api.production.colisweb.com/api/v5/clients/249/stores/8481/deliveries";
+    const method = "POST";
+    const headers = {
+        "Content-Type": "application/json"
+    };
 
-    const lastTimeCheckKey = 'lastTimeCheck';
-    const lastTimeCheck = await GM.getValue(lastTimeCheckKey, 0); // Default to 0 if not set
-    const currentTime = Date.now();
-
-    // Check if more than an hour has passed
-    if (currentTime - lastTimeCheck > 3600000) { //3600000
-
-        const url = "https://api.production.colisweb.com/api/v5/clients/249/stores/8481/deliveries";
-        const method = "POST";
-        const headers = {
-            "Content-Type": "application/json"
-        };
-
-        // Constructing the dynamic payload
-        const today = new Date();
-        const tenDaysFromToday = addDays(today, 10);
-        const payload = {
-            filters: {
-                timeSlot: {
-                    start: toISOStringWithoutTime(today), // Today as start date
-                    end: toISOStringWithoutTime(tenDaysFromToday) // Today + 10 days as end date
-                },
-                statusProvider: ["preOrdered", "confirmed", "pickedUp", "deliveryFailed", "deliveryReturnFailed"]
+    // Constructing the dynamic payload
+    const today = new Date();
+    const tenDaysFromToday = addDays(today, 10);
+    const payload = {
+        filters: {
+            timeSlot: {
+                start: toISOStringWithoutTime(today), // Today as start date
+                end: toISOStringWithoutTime(tenDaysFromToday) // Today + 10 days as end date
             },
-            sort: {
-                timeSlot: "asc"
-            },
-            page: "1",
-            pageSize: "100"
-        };
+            statusProvider: ["preOrdered", "confirmed", "pickedUp", "deliveryFailed", "deliveryReturnFailed"]
+        },
+        sort: {
+            timeSlot: "asc"
+        },
+        page: "1",
+        pageSize: "100"
+    };
 
-        try {
-            const response = await callAPI(url, method, headers, JSON.stringify(payload));
-            console.log("API call successful:", response);
-            await GM.setValue(lastTimeCheckKey, currentTime);
-            return response;
-        } catch (error) {
-            console.error("API call failed:", error);
-        }
-    } else {
-        console.log("API call bypassed: using stored data.");
-        return "bypass";
+    try {
+        const response = await callAPI(url, method, headers, JSON.stringify(payload));
+        console.log("API call successful:", response);
+        return response;
+    } catch (error) {
+        console.error("API call failed:", error);
     }
+
 }
 
 
 // Parse the delivery API response :
-async function parseDeliveries(responseText) {
+function parseDeliveries(responseText) {
+    const response = JSON.parse(responseText);
+    const deliveries = response.deliveries;
 
-    if (responseText !== "bypass") {
-        const response = JSON.parse(responseText);
-        const deliveries = response.deliveries;
+    const allDeliveries = [];
+    const todaysDeliveries = [];
+    const tomorrowsDeliveries = [];
 
-        const allDeliveries = [];
-        const todaysDeliveries = [];
-        const tomorrowsDeliveries = [];
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        deliveries.forEach((delivery) => {
-            const deliveryNumber = [...new Set(['ref1', 'ref2', 'ref3', 'ref4']
-                                               .map(ref => delivery[ref])
-                                               .filter(ref => ref !== null))]
+    deliveries.forEach((delivery) => {
+        const deliveryNumber = ['ref1', 'ref2', 'ref3', 'ref4']
+            .map(ref => delivery[ref])
+            .filter(ref => ref !== null)
             .join(", ");
-            const deliveryClient = `${delivery.shipping.firstName} ${delivery.shipping.lastName}`;
-            const date = new Date(delivery.timeSlot.start);
-            const status = delivery.statusOriginator;
+        const deliveryClient = `${delivery.shipping.firstName} ${delivery.shipping.lastName}`;
+        const date = new Date(delivery.timeSlot.start);
+        const status = delivery.statusOriginator;
 
-            const formattedDelivery = {
-                deliveryNumber,
-                deliveryClient,
-                date: date.toISOString().split('T')[0], // Extracting date part only for comparison
-                status
-            };
-
-            // Add to all deliveries
-            allDeliveries.push(formattedDelivery);
-
-            // Check if the delivery is for today
-            if (date.toISOString().split('T')[0] === today.toISOString().split('T')[0]) {
-                todaysDeliveries.push(formattedDelivery);
-            }
-
-            // Check if the delivery is for tomorrow
-            if (date.toISOString().split('T')[0] === tomorrow.toISOString().split('T')[0]) {
-                tomorrowsDeliveries.push(formattedDelivery);
-            }
-        });
-
-        deliveryItemList = {
-            allDeliveries,
-            todaysDeliveries,
-            tomorrowsDeliveries
+        const formattedDelivery = {
+            deliveryNumber,
+            deliveryClient,
+            date: date.toISOString().split('T')[0], // Extracting date part only for comparison
+            status
         };
 
-        //console.log("Data about to be stored : ", JSON.stringify(deliveryItemList));
-        GM.setValue('deliveryItemList', JSON.stringify(deliveryItemList));
+        // Add to all deliveries
+        allDeliveries.push(formattedDelivery);
 
-        console.log("Delivery Items List:", deliveryItemList);
-        return deliveryItemList;
+        // Check if the delivery is for today
+        if (date.toISOString().split('T')[0] === today.toISOString().split('T')[0]) {
+            todaysDeliveries.push(formattedDelivery);
+        }
 
-    } else {
-        const storedDataString = await GM.getValue('deliveryItemList', '{}'); // Retrieve the stored string
-        //console.log("Retrieved string of stored data : ", storedDataString);
-        deliveryItemList = JSON.parse(storedDataString);
-        console.log("Retrieved deliveryItemlist : ", deliveryItemList);
+        // Check if the delivery is for tomorrow
+        if (date.toISOString().split('T')[0] === tomorrow.toISOString().split('T')[0]) {
+            tomorrowsDeliveries.push(formattedDelivery);
+        }
+    });
+
+     deliveryItemList = {
+        allDeliveries,
+        todaysDeliveries,
+        tomorrowsDeliveries
+    };
+
+    console.log("Delivery Items List:", deliveryItemList);
+    return deliveryItemList;
+
+}
+
+
+// Function to format a Date object as YYYY-MM-DD
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = ('0' + (date.getMonth() + 1)).slice(-2); // Ensure two digits
+    const day = ('0' + date.getDate()).slice(-2); // Ensure two digits
+    return `${year}-${month}-${day}`;
+}
+
+
+async function fetch19TAPI() {
+    const today = new Date();
+    const tenDaysFromToday = addDays(today, 10);
+    const start = formatDate(today); // Today as start date
+    const end = formatDate(tenDaysFromToday); // Today + 10 days as end date
+
+    const url = `https://castorama-api.minutpass.com/1/delivery/deliveries?ticketOfficeId=8716&start=${start}&end=${end}`;
+
+    const method = "GET";
+    const headers = {
+        authorization: "Token eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXUyJ9.eyJleHAiOjE3MDg3MTQzNzAsImVtYWlsIjoiQXJuYXVkLkRlcmhhbkBjYXN0b3JhbWEuZnIiLCJzZXNzaW9uX3BsYWNlX2NvbnRleHRfa2V5IjoiQ0FTVE9SQU1BIiwiaWF0IjoiMTcwODQ1NTE3MCJ9.aEcKbe3ZxHlnA9j0WNC_9I2m9bs_yPwAAHdmX3gWIyG6tL80Q5LZ_nZLA0m-WoKQRR0VONTNsD4AUFRwrRuRPnjmZ1QnAjnLj_2SFMVbx6zj31AtyS4s7lYvJzXFv_x595HpMObgrpZ516-YAdciukb46j5Lt11KRgLKEcfKf-zP2hiJOXlQAdE-sk40Dpzgsne12vO_V38BrFb1zRL4Bv3OWGxUZmMgKi6kbbDy6ITATRNt1mnRPoDkbV1A1JrgE56j1Qu8pjECRayoXyuItrVSyZzoVlgElIs1ZVj0Psgy25WRSbB-knYziJTZ_SOY69l6CHAhLkgH0bLNfLEHBe9A87kyZP41efYUWe1mKdOc_4RHzW-qYsoAncLMRHMmBG7kONFLKX3ccppPMxd2vXWyqUiohDGM43X_rabudCX-A-3n477XdXYX9RMCRLPaYGfUT9a3XkIbZx6NueJPwOtkA7nHTv5OLbD9SDO2Ook4LpQ6jNzeUbsYshAXl20_-wyr0futoZXngTsL9hV9fPJP98-w4jvJfz0KdOvaA2boNeGd-1OOkfCpVzJ_1m1_ydJys2Ft9sQT03LaOd2LP4qIdVITW-ZWHp36Y_l6NjiNyW8CN5c4FTh8c_TS1vupzuUDLbQ2sUAMCAEw_KQp4wtN2Q4KweBBWz4XlJBHnDU"
+    }; // Specify headers if needed
+
+    try {
+        const response = await callAPI(url, method, headers, null); // No payload for GET request
+        console.log("API call successful:", response);
+    } catch (error) {
+        console.error("API call failed:", error);
     }
 }
 
 
-    //————————————————————————————————————————————————————————————————————————————————————————
-    //————————————————————————————————————————————————————————————————————————————————————————
-    //————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————
 
-    // MAIN :
-
-
-
-    (async function() {
-        'use strict';
-
-        console.log("DOM Loaded");
-        createButtons();
-        console.log("Buttons added");
-
-        const response = await makeDeliveryAPIRequest();
-        await parseDeliveries(response);
-
-        createOverlay()
-        console.log("Overlay added");
+// MAIN :
 
 
-    })();
+
+(async function() {
+    'use strict';
+
+    console.log("DOM Loaded");
+    const response = await makeDeliveryAPIRequest();
+    parseDeliveries(response);
+    await fetch19TAPI();
+    await GM.setValue("deliveryItemList", JSON.stringify(deliveryItemList));
+    console.log("Data stored:", JSON.stringify(deliveryItemList));
+    createButtons();
+    console.log("Buttons added");
+    createOverlay()
+    console.log("Overlay added");
+
+
+})();
