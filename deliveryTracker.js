@@ -17,9 +17,9 @@
 
 
 
-//————————————————————————————————————————————————————————————————————————————————————————
-//————————————————————————————————————————————————————————————————————————————————————————
-//————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 
 // Interface :
 
@@ -210,7 +210,9 @@ let OverlayIsVisible = false; // Tracks the overlay's visibility
 
 let detailsContainer1, detailsContainer2, detailsContainer3;
 
-let deliveryItemList = {} //test Dataset for development
+let CW_deliveryItemList = {}; //test Dataset for development
+
+let _19T_deliveryItemList = {};
 /*     allDeliveries: [
         { deliveryNumber: "D001", deliveryClient: "Client A" },
         { deliveryNumber: "D002", deliveryClient: "Client B" },
@@ -360,7 +362,7 @@ function createDeliveryItems(container, dataSetKey) {
     //container.innerHTML = ''; // Clear previous items
 
 
-    const dataSet = deliveryItemList[dataSetKey];
+    const dataSet = CW_deliveryItemList[dataSetKey];
 
     if (!dataSet) {
         console.log("No data set found to populate the container");
@@ -475,9 +477,9 @@ function createButtons() {
 
 
 
-//————————————————————————————————————————————————————————————————————————————————————————
-//————————————————————————————————————————————————————————————————————————————————————————
-//————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 
 // API call :
 
@@ -512,17 +514,129 @@ function toISOStringWithoutTime(date) {
     return date.toISOString().split('T')[0] + 'T00:00:00.000Z';
 }
 
+//Fonctions accessoires poçur fetch19TAPI() :
+// Function to format a Date object as YYYY-MM-DD
+
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = ('0' + (date.getMonth() + 1)).slice(-2); // Ensure two digits
+    const day = ('0' + date.getDate()).slice(-2); // Ensure two digits
+    return `${year}-${month}-${day}`;
+}
+
+async function fetch19TAPI() {
 
 
-
-async function makeDeliveryAPIRequest() {
-
-    const lastTimeCheckKey = 'lastTimeCheck';
-    const lastTimeCheck = await GM.getValue(lastTimeCheckKey, 0); // Default to 0 if not set
+    const _19T_lastTimeCheckKey = '_19T_lastTimeCheck';
+    const _19T_lastTimeCheck = await GM.getValue(_19T_lastTimeCheckKey, 0); // Default to 0 if not set
     const currentTime = Date.now();
 
     // Check if more than an hour has passed
-    if (currentTime - lastTimeCheck > 3600000) { //3600000
+    if (currentTime - _19T_lastTimeCheck > 3600000) { //3600000
+        const today = new Date();
+        const tenDaysFromToday = addDays(today, 10);
+        const start = formatDate(today); // Today as start date
+        const end = formatDate(tenDaysFromToday); // Today + 10 days as end date
+
+        const url = `https://castorama-api.minutpass.com/1/delivery/deliveries?ticketOfficeId=8716&start=${start}&end=${end}`;
+
+        const method = "GET";
+        const headers = {
+            authorization: "Token eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXUyJ9.eyJleHAiOjE3MDg3MTQzNzAsImVtYWlsIjoiQXJuYXVkLkRlcmhhbkBjYXN0b3JhbWEuZnIiLCJzZXNzaW9uX3BsYWNlX2NvbnRleHRfa2V5IjoiQ0FTVE9SQU1BIiwiaWF0IjoiMTcwODQ1NTE3MCJ9.aEcKbe3ZxHlnA9j0WNC_9I2m9bs_yPwAAHdmX3gWIyG6tL80Q5LZ_nZLA0m-WoKQRR0VONTNsD4AUFRwrRuRPnjmZ1QnAjnLj_2SFMVbx6zj31AtyS4s7lYvJzXFv_x595HpMObgrpZ516-YAdciukb46j5Lt11KRgLKEcfKf-zP2hiJOXlQAdE-sk40Dpzgsne12vO_V38BrFb1zRL4Bv3OWGxUZmMgKi6kbbDy6ITATRNt1mnRPoDkbV1A1JrgE56j1Qu8pjECRayoXyuItrVSyZzoVlgElIs1ZVj0Psgy25WRSbB-knYziJTZ_SOY69l6CHAhLkgH0bLNfLEHBe9A87kyZP41efYUWe1mKdOc_4RHzW-qYsoAncLMRHMmBG7kONFLKX3ccppPMxd2vXWyqUiohDGM43X_rabudCX-A-3n477XdXYX9RMCRLPaYGfUT9a3XkIbZx6NueJPwOtkA7nHTv5OLbD9SDO2Ook4LpQ6jNzeUbsYshAXl20_-wyr0futoZXngTsL9hV9fPJP98-w4jvJfz0KdOvaA2boNeGd-1OOkfCpVzJ_1m1_ydJys2Ft9sQT03LaOd2LP4qIdVITW-ZWHp36Y_l6NjiNyW8CN5c4FTh8c_TS1vupzuUDLbQ2sUAMCAEw_KQp4wtN2Q4KweBBWz4XlJBHnDU"
+        }; // Specify headers if needed
+
+        try {
+            const response = await callAPI(url, method, headers, null); // No payload for GET request
+            console.log("API call successful:", response);
+            await GM.setValue(_19T_lastTimeCheckKey, currentTime);
+            return response;
+        } catch (error) {
+            console.error("API call failed:", error);
+        }
+
+
+    } else {
+        console.log("API call bypassed: using stored data.");
+        return "bypass";
+    }
+}
+
+
+async function parse19TAPIResponse(responseText) {
+
+
+    if (responseText !== "bypass") {
+        const deliveries = JSON.parse(responseText);
+
+        const allDeliveries = [];
+        const todaysDeliveries = [];
+        const tomorrowsDeliveries = [];
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Remove time component for accurate comparison
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        deliveries.forEach(delivery => {
+            const deliveryDate = new Date(delivery.date);
+            deliveryDate.setHours(0, 0, 0, 0); // Normalize time for comparison
+
+            const deliveryItem = {
+                deliveryNumber: delivery.order.number,
+                deliveryClient: delivery.customer.fullname,
+                date: deliveryDate.toISOString().split('T')[0], // Format date as YYYY-MM-DD
+                moment: delivery.moment,
+                zone: delivery.zone.name,
+                price: delivery.zone.price,
+                pallets: delivery.order.pallets
+            };
+
+            // Add to all deliveries
+            allDeliveries.push(deliveryItem);
+
+            // Check if the delivery is for today or tomorrow
+            if (deliveryDate.getTime() === today.getTime()) {
+                todaysDeliveries.push(deliveryItem);
+            } else if (deliveryDate.getTime() === tomorrow.getTime()) {
+                tomorrowsDeliveries.push(deliveryItem);
+            }
+        });
+
+        _19T_deliveryItemList = {
+            allDeliveries,
+            todaysDeliveries,
+            tomorrowsDeliveries
+        };
+
+
+        console.log("_19T_deliveryItemList:", _19T_deliveryItemList);
+
+        GM.setValue('_19T_deliveryItemList', JSON.stringify(_19T_deliveryItemList));
+
+        return _19T_deliveryItemList;
+
+
+
+
+
+    } else {
+        const storedDataString = await GM.getValue('_19T_deliveryItemList', '{}'); // Retrieve the stored string
+        //console.log("Retrieved string of stored data : ", storedDataString);
+        _19T_deliveryItemList = JSON.parse(storedDataString);
+        console.log("Retrieved_19T_deliveryItemList : ", _19T_deliveryItemList);
+    }
+
+}
+
+
+async function fetch_CW_API() {
+
+    const CW_lastTimeCheckKey = 'CW_lastTimeCheck';
+    const CW_lastTimeCheck = await GM.getValue(CW_lastTimeCheckKey, 0); // Default to 0 if not set
+    const currentTime = Date.now();
+
+    // Check if more than an hour has passed
+    if (currentTime - CW_lastTimeCheck > 3600000) { //3600000
 
         const url = "https://api.production.colisweb.com/api/v5/clients/249/stores/8481/deliveries";
         const method = "POST";
@@ -551,7 +665,7 @@ async function makeDeliveryAPIRequest() {
         try {
             const response = await callAPI(url, method, headers, JSON.stringify(payload));
             console.log("API call successful:", response);
-            await GM.setValue(lastTimeCheckKey, currentTime);
+            await GM.setValue(CW_lastTimeCheckKey, currentTime);
             return response;
         } catch (error) {
             console.error("API call failed:", error);
@@ -564,7 +678,7 @@ async function makeDeliveryAPIRequest() {
 
 
 // Parse the delivery API response :
-async function parseDeliveries(responseText) {
+async function parse_CW_response(responseText) {
 
     if (responseText !== "bypass") {
         const response = JSON.parse(responseText);
@@ -608,47 +722,50 @@ async function parseDeliveries(responseText) {
             }
         });
 
-        deliveryItemList = {
+        CW_deliveryItemList = {
             allDeliveries,
             todaysDeliveries,
             tomorrowsDeliveries
         };
 
-        //console.log("Data about to be stored : ", JSON.stringify(deliveryItemList));
-        GM.setValue('deliveryItemList', JSON.stringify(deliveryItemList));
+        //console.log("Data about to be stored : ", JSON.stringify(CW_deliveryItemList));
+        GM.setValue('CW_deliveryItemList', JSON.stringify(CW_deliveryItemList));
 
-        console.log("Delivery Items List:", deliveryItemList);
-        return deliveryItemList;
+        console.log("Delivery Items List:", CW_deliveryItemList);
+        return CW_deliveryItemList;
 
     } else {
-        const storedDataString = await GM.getValue('deliveryItemList', '{}'); // Retrieve the stored string
+        const storedDataString = await GM.getValue('CW_deliveryItemList', '{}'); // Retrieve the stored string
         //console.log("Retrieved string of stored data : ", storedDataString);
-        deliveryItemList = JSON.parse(storedDataString);
-        console.log("Retrieved deliveryItemlist : ", deliveryItemList);
+        CW_deliveryItemList = JSON.parse(storedDataString);
+        console.log("Retrieved CW_deliveryItemList : ", CW_deliveryItemList);
     }
 }
 
 
-    //————————————————————————————————————————————————————————————————————————————————————————
-    //————————————————————————————————————————————————————————————————————————————————————————
-    //————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+//————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 
-    // MAIN :
-
-
-
-    (async function() {
-        'use strict';
-
-        console.log("DOM Loaded");
-        createButtons();
-        console.log("Buttons added");
-
-        const response = await makeDeliveryAPIRequest();
-        await parseDeliveries(response);
-
-        createOverlay()
-        console.log("Overlay added");
+// MAIN :
 
 
-    })();
+
+(async function() {
+    'use strict';
+
+    console.log("DOM Loaded");
+    createButtons();
+    console.log("Buttons added");
+
+    const CWresponse = await fetch_CW_API();
+    await parse_CW_response(CWresponse);
+
+    const _19TResponse = await fetch19TAPI();
+    await parse19TAPIResponse(_19TResponse);
+
+    createOverlay()
+    console.log("Overlay added");
+
+
+})();
