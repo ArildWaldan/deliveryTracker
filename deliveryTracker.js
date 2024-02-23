@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         ToggleBar
-// @namespace    http://tampermonkey.net/
-// @version      2024-02-16
+// @name         delivery-tracker
+// @namespace    casto/scripts
+// @version      1.1
 // @description  try to take over the world!
 // @author       You
 // @match        https://*/*
