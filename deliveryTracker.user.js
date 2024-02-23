@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         delivery-tracker
 // @namespace    casto/scripts
-// @version      1.1
+// @version      1.3
 // @description  try to take over the world!
 // @author       You
 // @match        https://*/*
@@ -121,6 +121,10 @@ GM_addStyle(`
     }
 
 
+     .overlay-details-container::-webkit-scrollbar {
+     display: none;
+      }
+
     .overlay-menu-container::after {
         content: ""; /* No actual content, used for styling purposes */
         z-index: 10000;
@@ -166,7 +170,7 @@ GM_addStyle(`
     .overlay-details-container {
         position: fixed;
         box-sizing: border-box;
-        height: 65%;
+        height: 80%;
         width: 250px;
         right: 1px;
         justify-content: center;
@@ -178,16 +182,18 @@ GM_addStyle(`
         flex-direction: column;
         top: 50%;
         transform: translateY(-50%);
+        overflow-y: auto;
+
 
     }
 
-    .overlay-details-container::after {
-    content: ""
-    }
+
+
+
 
 
     .delivery-item {
-        margin: 0px 5px 0px 5px;
+        margin: 0px 5px 0px 10px;
         box-sizing: border-box;
         font-size: 14px;
         display: block;
@@ -210,9 +216,14 @@ let OverlayIsVisible = false; // Tracks the overlay's visibility
 
 let detailsContainer1, detailsContainer2, detailsContainer3;
 
-let CW_deliveryItemList = {}; //test Dataset for development
 
-let _19T_deliveryItemList = {};
+const storedDataString_CW = await GM.getValue('CW_deliveryItemList', '{}');
+let CW_deliveryItemList = JSON.parse(storedDataString_CW);;
+
+
+const storedDataString_19T = await GM.getValue('_19T_deliveryItemList', '{}');
+let _19T_deliveryItemList = JSON.parse(storedDataString_19T);
+
 
 
 const deliveriesData = { // Example data for deliveries
@@ -220,6 +231,8 @@ const deliveriesData = { // Example data for deliveries
     tomorrowDeliveries: 2,
     todayDeliveries: 3
 };
+
+
 
 
 
@@ -366,7 +379,7 @@ function createDeliveryItems(container, collection, dataSetKey) {
         deliveryItem.className = 'delivery-item';
         //console.log("class assigned");
         // Format the text content to include both the delivery number and client name
-        deliveryItem.innerHTML = `<strong>Commande :</strong> ${item.deliveryNumber}<br><strong>Client:</strong> ${item.deliveryClient}`;
+        deliveryItem.innerHTML = `<strong>Commande :</strong> ${item.deliveryNumber}<br><strong>Client:</strong> ${item.deliveryClient}<br><strong>Date:</strong> ${item.date}`;
         container.appendChild(deliveryItem);
         //console.log("deliveryItem appended to the details container");
     });
