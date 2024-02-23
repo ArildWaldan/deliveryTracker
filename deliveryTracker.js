@@ -213,21 +213,6 @@ let detailsContainer1, detailsContainer2, detailsContainer3;
 let CW_deliveryItemList = {}; //test Dataset for development
 
 let _19T_deliveryItemList = {};
-/*     allDeliveries: [
-        { deliveryNumber: "D001", deliveryClient: "Client A" },
-        { deliveryNumber: "D002", deliveryClient: "Client B" },
-        { deliveryNumber: "D003", deliveryClient: "Client C" }
-    ],
-    tomorrowsDeliveries: [
-        { deliveryNumber: "D004", deliveryClient: "Client D" },
-        { deliveryNumber: "D005", deliveryClient: "Client E" }
-    ],
-    todaysDeliveries: [
-        { deliveryNumber: "D006", deliveryClient: "Client F" },
-        { deliveryNumber: "D007", deliveryClient: "Client G" }
-    ]
-};
- */
 
 
 const deliveriesData = { // Example data for deliveries
@@ -273,6 +258,7 @@ function createOverlay() {
         detailsContainer2 = document.createElement('div');
         detailsContainer3 = document.createElement('div');
 
+
         detailsContainer1.className = 'overlay-details-container';
         detailsContainer2.className = 'overlay-details-container';
         detailsContainer3.className = 'overlay-details-container';
@@ -287,9 +273,13 @@ function createOverlay() {
 
         //Populating the details container :
 
-        createDeliveryItems(detailsContainer1, "allDeliveries");
-        createDeliveryItems(detailsContainer2, "tomorrowsDeliveries");
-        createDeliveryItems(detailsContainer3, "todaysDeliveries");
+        createDeliveryItems(detailsContainer1, CW_deliveryItemList, "allDeliveries");
+        createDeliveryItems(detailsContainer2, CW_deliveryItemList, "tomorrowsDeliveries");
+        createDeliveryItems(detailsContainer3, CW_deliveryItemList, "todaysDeliveries");
+
+        createDeliveryItems(detailsContainer1, _19T_deliveryItemList, "allDeliveries");
+        createDeliveryItems(detailsContainer2, _19T_deliveryItemList, "tomorrowsDeliveries");
+        createDeliveryItems(detailsContainer3, _19T_deliveryItemList, "todaysDeliveries");
 
         console.log("details containers appended to the overlay");
     }
@@ -308,7 +298,7 @@ function createOverlay() {
     });
 
 
-    // Create menu items based on the button positions
+
     buttonPositions.forEach((posY, index) => {
         const menuItem = document.createElement('div');
         menuItem.className = 'overlay-menu-item';
@@ -350,7 +340,7 @@ function createOverlay() {
 
 
 
-function createDeliveryItems(container, dataSetKey) {
+function createDeliveryItems(container, collection, dataSetKey) {
     console.log("Creating delivery items");
 
     if (!container) {
@@ -359,10 +349,10 @@ function createDeliveryItems(container, dataSetKey) {
     }
 
     console.log("Details container found : ", container);
-    //container.innerHTML = ''; // Clear previous items
 
 
-    const dataSet = CW_deliveryItemList[dataSetKey];
+
+    const dataSet = collection[dataSetKey];
 
     if (!dataSet) {
         console.log("No data set found to populate the container");
@@ -526,13 +516,12 @@ function formatDate(date) {
 
 async function fetch19TAPI() {
 
-
     const _19T_lastTimeCheckKey = '_19T_lastTimeCheck';
     const _19T_lastTimeCheck = await GM.getValue(_19T_lastTimeCheckKey, 0); // Default to 0 if not set
     const currentTime = Date.now();
 
     // Check if more than an hour has passed
-    if (currentTime - _19T_lastTimeCheck > 3600000) { //3600000
+    if (currentTime - _19T_lastTimeCheck > 3600000 || Object.keys(_19T_deliveryItemList).length === 0 ) { //3600000
         const today = new Date();
         const tenDaysFromToday = addDays(today, 10);
         const start = formatDate(today); // Today as start date
@@ -636,7 +625,7 @@ async function fetch_CW_API() {
     const currentTime = Date.now();
 
     // Check if more than an hour has passed
-    if (currentTime - CW_lastTimeCheck > 3600000) { //3600000
+    if (currentTime - CW_lastTimeCheck > 3600000 || Object.keys(CW_deliveryItemList).length === 0 ) { //3600000
 
         const url = "https://api.production.colisweb.com/api/v5/clients/249/stores/8481/deliveries";
         const method = "POST";
