@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         delivery-tracker
+// @name         delivery-tracker.
 // @namespace    casto/scripts
 // @version      1.1
 // @description  try to take over the world!
